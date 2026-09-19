@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/myBookShop/bookstore-db-setup.sql" dialect="TSQL" />
+    <file url="file://$PROJECT_DIR$/myBookShop/bookstore_schema.sql" dialect="TSQL" />
+    <file url="file://$PROJECT_DIR$/myBookShop/src/main/resources/db/migration/V1_add_Permisson.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/myBookShop/src/main/resources/db/migration/V2__addPermisson_to_roles.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/myBookShop/src/main/resources/db/migration/V3__seed_data.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/myBookShop/src/main/resources/db/migration/V4__adddata_to_roles.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/myBookShop/src/main/resources/db/migration/V5__alter_type_createAt.sql" dialect="TSQL" />
+  </component>
+</project>

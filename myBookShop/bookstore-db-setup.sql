@@ -1,0 +1,12 @@
+IF DB_ID('bookstore') IS NOT NULL
+BEGIN
+    ALTER DATABASE bookstore SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE bookstore;
+END
+GO
+
+CREATE DATABASE bookstore;
+GO
+
+USE bookstore;
+GO

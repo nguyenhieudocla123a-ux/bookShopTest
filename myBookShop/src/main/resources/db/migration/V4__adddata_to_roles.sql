@@ -1,0 +1,46 @@
+INSERT INTO dbo.roles(name)
+VALUES
+    -- USER
+    ('USER,book:read'),
+    ('USER,book:borrow'),
+    ('USER,book:search'),
+    ('USER,author:read'),
+    ('USER,borrow:read'),
+
+    -- STAFF
+    ('STAFF,book:read'),
+    ('STAFF,book:write'),
+    ('STAFF,book:update'),
+    ('STAFF,book:delete'),
+    ('STAFF,book:borrow'),
+    ('STAFF,book:search'),
+    ('STAFF,user:read'),
+    ('STAFF,author:read'),
+    ('STAFF,author:write'),
+    ('STAFF,author:update'),
+    ('STAFF,borrow:read'),
+    ('STAFF,borrow:update'),
+
+    -- ADMIN
+    ('ADMIN,book:read'),
+    ('ADMIN,book:write'),
+    ('ADMIN,book:update'),
+    ('ADMIN,book:delete'),
+    ('ADMIN,book:search'),
+    ('ADMIN,book:borrow'),
+    ('ADMIN,user:read'),
+    ('ADMIN,user:write'),
+    ('ADMIN,user:update'),
+    ('ADMIN,user:delete'),
+    ('ADMIN,role:read'),
+    ('ADMIN,role:write'),
+    ('ADMIN,role:update'),
+    ('ADMIN,role:delete'),
+    ('ADMIN,author:read'),
+    ('ADMIN,author:write'),
+    ('ADMIN,author:update'),
+    ('ADMIN,author:delete'),
+    ('ADMIN,borrow:read'),
+    ('ADMIN,borrow:write'),
+    ('ADMIN,borrow:update'),
+    ('ADMIN,borrow:delete');
