@@ -2,6 +2,7 @@ package com.example.myBookShop.Controllers;
 
 
 import com.example.myBookShop.DTO.Request.CreateBookRequest;
+import com.example.myBookShop.DTO.Request.UpdateBookRequest;
 import com.example.myBookShop.DTO.Respone.ApiRespone;
 import com.example.myBookShop.DTO.Respone.BookResponse;
 import com.example.myBookShop.DTO.Respone.PageResponse;
@@ -58,4 +59,12 @@ public class BookController {
     }
 
     //TODO Updating book ( title , quantity ,price.. )
+    @PostMapping("/book-update")
+    public ResponseEntity<?> update(@RequestBody  UpdateBookRequest request){
+        ApiRespone<BookResponse> res = new ApiRespone<>(
+                true,bookService.update(request),"Successfully",LocalDateTime.now()
+        );
+        return ResponseEntity.ok(res);
+    }
+
 }

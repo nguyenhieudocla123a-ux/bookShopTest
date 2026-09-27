@@ -1,6 +1,7 @@
 package com.example.myBookShop.Service;
 
 import com.example.myBookShop.DTO.Request.CreateBookRequest;
+import com.example.myBookShop.DTO.Request.UpdateBookRequest;
 import com.example.myBookShop.DTO.Respone.BookResponse;
 import com.example.myBookShop.Entity.Author;
 import com.example.myBookShop.Entity.Book;
@@ -42,5 +43,15 @@ public class BookService {
 
       public Page<BookResponse> getAll(Pageable pageable){
           return bookRepository.findAll(pageable).map(bookMapper::toResponse);
+      }
+
+      //update title ,price,quantity
+      @Transactional
+      public BookResponse update(UpdateBookRequest request) {
+          Book book=bookRepository.findById(request.getId()).orElseThrow(()-> new ResourceNotFoundException("Book Not Found"));
+          book.setPrice(request.getPrice());
+          book.setQuantity(request.getQuantity());
+          book.setTitle(request.getTitle());
+          return bookMapper.toResponse(book);
       }
 }
