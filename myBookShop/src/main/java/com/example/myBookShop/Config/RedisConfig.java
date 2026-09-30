@@ -24,8 +24,10 @@ public class RedisConfig {
         return template;
     }
 
+    // For K,V = String ,String allow to use them
     @Bean
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory){
+
         return new StringRedisTemplate(connectionFactory);
     }
 }
