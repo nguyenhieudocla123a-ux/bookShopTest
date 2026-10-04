@@ -67,4 +67,11 @@ public class BookController {
         return ResponseEntity.ok(res);
     }
 
+    @GetMapping("/{id}")
+    public  ResponseEntity<?> getBook(@PathVariable int id){
+        ApiRespone<BookResponse> res = new ApiRespone<>(
+                true,bookService.getBook(id),"Successfully",LocalDateTime.now()
+        );
+        return ResponseEntity.ok(res);
+    }
 }

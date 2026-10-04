@@ -44,8 +44,9 @@ public class BookService {
       public BookResponse getBook(int id){
           String key="book:"+id;
           //Firstly, check cache
-          Object object=redisTemplate.opsForValue().get(key)
+          Object object=redisTemplate.opsForValue().get(key);
           if(object!=null){
+              System.out.println("Đã lấy từ cache ra");
               return bookMapper.toResponse( (Book) object);
           }
           //Save cache
