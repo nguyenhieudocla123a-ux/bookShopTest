@@ -14,7 +14,10 @@ import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -22,7 +25,7 @@ public class BookService {
       private final BookRepository bookRepository;
       private final BookMapper bookMapper;
       private final AuthorRepository authorRepository;
-
+      private final RedisTemplate<String ,Object> redisTemplate;
 
       //Add book to ours library
 
@@ -38,6 +41,19 @@ public class BookService {
           return bookMapper.toResponse(newBook);
       }
 
+      public BookResponse getBook(int id){
+          String key="book:"+id;
+          //Firstly, check cache
+          Object object=redisTemplate.opsForValue().get(key)
+          if(object!=null){
+              return bookMapper.toResponse( (Book) object);
+          }
+          //Save cache
+          Book book= bookRepository.findById(id).orElseThrow(()->new ResourceNotFoundException("Book Not Found "));
+          redisTemplate.opsForValue().set(key,book);
+          return bookMapper.toResponse(book);
+
+      }
 
       // Get all books
 
