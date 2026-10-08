@@ -9,6 +9,7 @@ import com.example.myBookShop.Exception.ResourceNotFoundException;
 import com.example.myBookShop.Mapper.BookMapper;
 import com.example.myBookShop.Repositories.AuthorRepository;
 import com.example.myBookShop.Repositories.BookRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 
 @Service
@@ -26,7 +28,7 @@ public class BookService {
       private final BookMapper bookMapper;
       private final AuthorRepository authorRepository;
       private final RedisTemplate<String ,Object> redisTemplate;
-
+      private final ObjectMapper objectMapper;
       //Add book to ours library
 
       @Transactional
@@ -44,13 +46,13 @@ public class BookService {
       public BookResponse getBook(int id){
           String key="book:"+id;
           //Firstly, check cache
-          Object object=redisTemplate.opsForValue().get(key)
+          Object object=redisTemplate.opsForHash().entries(key);
           if(object!=null){
               return bookMapper.toResponse( (Book) object);
           }
           //Save cache
           Book book= bookRepository.findById(id).orElseThrow(()->new ResourceNotFoundException("Book Not Found "));
-          redisTemplate.opsForValue().set(key,book);
+          redisTemplate.opsForHash().putAll(key,objectMapper.convertValue(book, HashMap.class));
           return bookMapper.toResponse(book);
 
       }
