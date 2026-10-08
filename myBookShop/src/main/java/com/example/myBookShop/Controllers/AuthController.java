@@ -18,6 +18,7 @@ import com.example.myBookShop.Security.JwtService;
 import com.example.myBookShop.Service.RefreshTokenService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -47,7 +49,7 @@ public class AuthController {
     private final UserRoleRepository userRolesRepository;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
-
+    private final RedisTemplate<String,Object> redisTemplate;
 
     @PostMapping("/login")
     public ResponseEntity<?> Login(@Valid @RequestBody LoginRequest loginRequest){
@@ -60,6 +62,7 @@ public class AuthController {
         //Tạo jwt Response
         String refreshToken=refreshTokenService.create(user.getId()).getToken();
 
+        redisTemplate.opsForValue().set("refreshToken:"+user.getId(),refreshToken,10, TimeUnit.DAYS);
         String accessToken=refreshTokenService.createNewAccessToken(refreshToken);
         jwtResponse jwtRes=new jwtResponse(accessToken,user.getUsername(),user.getEmail(),user.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList());
         //Trả respone
