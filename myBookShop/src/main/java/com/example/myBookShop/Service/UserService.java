@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -43,7 +44,8 @@ public class UserService implements UserDetailsService {
           return userRepository.findAll(pageable).map(userMapper::toSimpleResponse);
     }
 
-    //TODO Delete, Update
 
+
+    //TODO Delete, Update
 
 }

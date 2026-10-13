@@ -9,6 +9,7 @@ import com.example.myBookShop.Exception.ResourceNotFoundException;
 import com.example.myBookShop.Mapper.BookMapper;
 import com.example.myBookShop.Repositories.AuthorRepository;
 import com.example.myBookShop.Repositories.BookRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,7 +18,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @AllArgsConstructor
@@ -26,7 +30,7 @@ public class BookService {
       private final BookMapper bookMapper;
       private final AuthorRepository authorRepository;
       private final RedisTemplate<String ,Object> redisTemplate;
-
+      private final ObjectMapper objectMapper;
       //Add book to ours library
 
       @Transactional
@@ -44,17 +48,24 @@ public class BookService {
       public BookResponse getBook(int id){
           String key="book:"+id;
           //Firstly, check cache
-          Object object=redisTemplate.opsForValue().get(key)
-          if(object!=null){
-              return bookMapper.toResponse( (Book) object);
+          Map<Object,Object> object=redisTemplate.opsForHash().entries(key);
+          if(!object.isEmpty()){
+              return bookMapper.toResponse( objectMapper.convertValue(object,Book.class));
           }
           //Save cache
           Book book= bookRepository.findById(id).orElseThrow(()->new ResourceNotFoundException("Book Not Found "));
-          redisTemplate.opsForValue().set(key,book);
+          redisTemplate.opsForHash().putAll(key,objectMapper.convertValue(bookMapper.toResponse(book), HashMap.class));
           return bookMapper.toResponse(book);
 
       }
+      // recordRecentBook
 
+      public void recordRecentBook(int userId,Integer bookId){
+          String key="recent:book" + userId;
+          redisTemplate.opsForList().leftPush(key,bookId);
+          redisTemplate.opsForList().trim(key,0,4);
+          redisTemplate.expire(key,10, TimeUnit.DAYS);
+      }
       // Get all books
 
       public Page<BookResponse> getAll(Pageable pageable){
