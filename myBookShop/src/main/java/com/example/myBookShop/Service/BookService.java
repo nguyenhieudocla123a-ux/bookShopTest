@@ -61,10 +61,10 @@ public class BookService {
       // recordRecentBook
 
       public void recordRecentBook(int userId,Integer bookId){
-          String key="recent:book" + userId;
+          String key="recent:book:" + userId;
           redisTemplate.opsForList().leftPush(key,bookId);
           redisTemplate.opsForList().trim(key,0,4);
-          redisTemplate.expire(key,10, TimeUnit.DAYS);
+          redisTemplate.expire(key,10, TimeUnit.MINUTES);
       }
       // Get all books
 
@@ -79,6 +79,16 @@ public class BookService {
           book.setPrice(request.getPrice());
           book.setQuantity(request.getQuantity());
           book.setTitle(request.getTitle());
+          return bookMapper.toResponse(book);
+      }
+
+      public List<Object> getLatestSearch(int userId){
+          String key="recent:book:" + userId;
+          return redisTemplate.opsForList().range(key,0,-1);
+      }
+      public BookResponse searchBook(int bookId,int userId){
+          Book book=bookRepository.findById(bookId).orElseThrow(()-> new ResourceNotFoundException("Book Not Found!"));
+          recordRecentBook(userId,bookId);
           return bookMapper.toResponse(book);
       }
 }

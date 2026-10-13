@@ -8,6 +8,7 @@ import com.example.myBookShop.DTO.Respone.BookResponse;
 import com.example.myBookShop.DTO.Respone.PageResponse;
 import com.example.myBookShop.Service.BookService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Null;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/book")
@@ -71,6 +73,20 @@ public class BookController {
     public  ResponseEntity<?> getBook(@PathVariable int id){
         ApiRespone<BookResponse> res = new ApiRespone<>(
                 true,bookService.getBook(id),"Successfully",LocalDateTime.now()
+        );
+        return ResponseEntity.ok(res);
+    }
+    @GetMapping("/latest/{id}")
+    public  ResponseEntity<?> getLatestBook(@PathVariable int id){
+        ApiRespone<List<Object>> res = new ApiRespone<>(
+                true,bookService.getLatestSearch(id),"Successfully",LocalDateTime.now()
+        );
+        return ResponseEntity.ok(res);
+    }
+    @GetMapping("/search/{userId}/{bookId}")
+    public  ResponseEntity<?> searchBook (@PathVariable int userId,@PathVariable int bookId){
+        ApiRespone<BookResponse> res = new ApiRespone<>(
+                true,bookService.searchBook(bookId,userId),"Successfully",LocalDateTime.now()
         );
         return ResponseEntity.ok(res);
     }

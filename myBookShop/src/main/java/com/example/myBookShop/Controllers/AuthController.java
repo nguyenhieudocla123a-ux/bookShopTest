@@ -16,6 +16,7 @@ import com.example.myBookShop.Repositories.UserRepository;
 import com.example.myBookShop.Repositories.UserRoleRepository;
 import com.example.myBookShop.Security.JwtService;
 import com.example.myBookShop.Service.RefreshTokenService;
+import com.example.myBookShop.untils.GenerateCode;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -35,6 +36,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 @RestController
@@ -50,7 +53,7 @@ public class AuthController {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final RedisTemplate<String,Object> redisTemplate;
-
+    private final GenerateCode generateCode;
     @PostMapping("/login")
     public ResponseEntity<?> Login(@Valid @RequestBody LoginRequest loginRequest){
         User user=userRepository.findByUserName(loginRequest.getUserName()).orElseThrow(()->new UsernameNotFoundException("UserName not found"));
@@ -89,12 +92,25 @@ public class AuthController {
         userRegister.setPassWord(passwordEncoder.encode(passWord));
         userRegister.setEnable(true);
         userRegister.setCreatedAt(LocalDateTime.now());
-        //set auth
         // default role : User
         Role role = roleRepository.findByName("USER").orElseThrow(()-> new ResourceNotFoundException("Role not found"));
-        userRepository.save(userRegister);
-        userRolesRepository.save(new userRole(userRegister,role));
-        return ResponseEntity.ok("Sign up Successful!");
+        String code = generateCode.genCode();
+        String key = "code:"+userRegister.getUsername();
+        redisTemplate.opsForValue().set(key,code,60,TimeUnit.SECONDS);
+        System.out.print("\n==> Code của ban : " + code);
+        Scanner scanner= new Scanner(System.in);
+        System.out.print("\n==> Xác nhân Code : ");
+        String yourCode =scanner.nextLine();
+        if(yourCode.equals(code) && redisTemplate.hasKey(key)) {
+            userRepository.save(userRegister);
+            userRolesRepository.save(new userRole(userRegister,role));
+            return ResponseEntity.ok("Sign up Successful!");
+        }
+        else throw new RuntimeException("Wrong code!");
+
+
+
+
     }
 
     @PostMapping("/logout")
