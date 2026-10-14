@@ -62,6 +62,8 @@ public class BookService {
 
       public void recordRecentBook(int userId,Integer bookId){
           String key="recent:book:" + userId;
+          //remove duplicated id before record lastest id
+          redisTemplate.opsForList().remove(key,0,bookId);
           redisTemplate.opsForList().leftPush(key,bookId);
           redisTemplate.opsForList().trim(key,0,4);
           redisTemplate.expire(key,10, TimeUnit.MINUTES);
