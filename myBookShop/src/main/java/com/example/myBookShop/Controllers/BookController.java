@@ -88,6 +88,24 @@ public class BookController {
         ApiRespone<BookResponse> res = new ApiRespone<>(
                 true,bookService.searchBook(bookId,userId),"Successfully",LocalDateTime.now()
         );
+        //search ==> Up views
+        bookService.increaseView(bookId);
+        return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/book-view/{bookId}/{score}")
+    public  ResponseEntity<?> setBookView(@PathVariable int bookId , @PathVariable int score){
+        bookService.bookView(bookId,score);
+        ApiRespone<Void> res = new ApiRespone<>(
+                true,null,"Set count of views for this book successfully",LocalDateTime.now()
+        );
+        return ResponseEntity.ok(res);
+    }
+    @PostMapping("/top-views/{topCount}")
+    public  ResponseEntity<?> topViews(@PathVariable int topCount ){
+        ApiRespone<Object> res = new ApiRespone<>(
+                true,bookService.topScore(topCount-1),"Successfully",LocalDateTime.now()
+        );
         return ResponseEntity.ok(res);
     }
 

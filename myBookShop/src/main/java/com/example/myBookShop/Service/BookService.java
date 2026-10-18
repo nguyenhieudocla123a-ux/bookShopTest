@@ -16,11 +16,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -92,5 +91,29 @@ public class BookService {
           Book book=bookRepository.findById(bookId).orElseThrow(()-> new ResourceNotFoundException("Book Not Found!"));
           recordRecentBook(userId,bookId);
           return bookMapper.toResponse(book);
+      }
+
+
+      //TODO view score book
+      @Transactional
+      public void bookView(int bookId, int view){
+          Book book=bookRepository.findById(bookId).
+                  orElseThrow(()-> new ResourceNotFoundException("Book Not Found!"));
+          String key="book:ranking:views";
+          redisTemplate.opsForZSet().add(key, book.getTitle(),view);
+          redisTemplate.expire(key,7,TimeUnit.DAYS);
+      }
+     @Transactional
+      public void increaseView(int bookId ){
+         Book book=bookRepository.findById(bookId).
+                 orElseThrow(()-> new ResourceNotFoundException("Book Not Found!"));
+         String key="book:ranking:views";
+         redisTemplate.opsForZSet().incrementScore(key,book.getTitle(),1);
+      }
+
+      //Top views ==> input count
+      public Set<ZSetOperations.TypedTuple<Object>> topScore(int count){
+          String key="book:ranking:views";
+          return redisTemplate.opsForZSet().reverseRangeWithScores(key,0,count);
       }
 }
