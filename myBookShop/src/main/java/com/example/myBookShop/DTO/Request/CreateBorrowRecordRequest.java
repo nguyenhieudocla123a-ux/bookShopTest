@@ -8,4 +8,5 @@ import lombok.Data;
 public class CreateBorrowRecordRequest {
     int userId;
     int bookId;
+    Long returnDate;
 }

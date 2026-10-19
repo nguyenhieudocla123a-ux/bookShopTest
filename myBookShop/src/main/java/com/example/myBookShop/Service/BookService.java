@@ -116,4 +116,6 @@ public class BookService {
           String key="book:ranking:views";
           return redisTemplate.opsForZSet().reverseRangeWithScores(key,0,count);
       }
+
+
 }

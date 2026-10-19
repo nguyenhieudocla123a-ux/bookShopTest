@@ -1,5 +1,7 @@
 package com.example.myBookShop.Config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -15,11 +17,13 @@ public class RedisConfig {
     public RedisTemplate<String ,Object> redisTemplate(RedisConnectionFactory connectionFactory){
         RedisTemplate<String ,Object> template= new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
+        ObjectMapper om = new ObjectMapper();
+        om.registerModule(new JavaTimeModule());
         template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
+        template.setValueSerializer(new Jackson2JsonRedisSerializer<>(om,Object.class));
 
         template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
+        template.setHashValueSerializer(new Jackson2JsonRedisSerializer<>(om,Object.class));
         return template;
     }
 
