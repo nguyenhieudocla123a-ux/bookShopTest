@@ -1,17 +1,7 @@
-IF DB_ID('bookstore') IS NULL
-BEGIN
-    CREATE DATABASE bookstore;
-END;
-
-USE bookstore;
-
-DROP TABLE IF EXISTS dbo.borrow_records;
-DROP TABLE IF EXISTS dbo.user_roles;
-DROP TABLE IF EXISTS dbo.refresh_tokens;
-DROP TABLE IF EXISTS dbo.books;
-DROP TABLE IF EXISTS dbo.authors;
-DROP TABLE IF EXISTS dbo.roles;
-DROP TABLE IF EXISTS dbo.users;
+-- Tao toan bo bang khi chay tren database trong.
+-- Database da co du lieu duoc Flyway baseline o version 1 nen se bo qua file nay.
+-- roles.name chua UNIQUE vi V2 va V4 chen trung mot gia tri; V6 se loai ban trung roi them UNIQUE.
+-- refresh_tokens.created_at chua co DEFAULT vi V5 can ALTER cot nay truoc khi them DEFAULT.
 
 CREATE TABLE dbo.users (
     id INT IDENTITY(1,1) PRIMARY KEY,
@@ -25,7 +15,7 @@ CREATE TABLE dbo.users (
 
 CREATE TABLE dbo.roles (
     id INT IDENTITY(1,1) PRIMARY KEY,
-    name NVARCHAR(255) NOT NULL UNIQUE
+    name NVARCHAR(255) NOT NULL
 );
 
 CREATE TABLE dbo.authors (
@@ -37,7 +27,7 @@ CREATE TABLE dbo.authors (
 CREATE TABLE dbo.books (
     id INT IDENTITY(1,1) PRIMARY KEY,
     title NVARCHAR(255) NOT NULL,
-    price DECIMAL(19,2) NOT NULL,
+    price NUMERIC(38,2) NULL,
     quantity INT NOT NULL,
     author_id INT NOT NULL,
     CONSTRAINT FK_books_author FOREIGN KEY (author_id) REFERENCES dbo.authors(id)
@@ -54,9 +44,9 @@ CREATE TABLE dbo.user_roles (
 CREATE TABLE dbo.refresh_tokens (
     id INT IDENTITY(1,1) PRIMARY KEY,
     token NVARCHAR(255) NOT NULL UNIQUE,
-    expires_at DATETIME2 NOT NULL,
+    expires_at DATETIMEOFFSET(6) NULL,
     revoked BIT NOT NULL DEFAULT 0,
-    created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    created_at DATETIME2 NULL,
     user_id INT NOT NULL,
     CONSTRAINT FK_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES dbo.users(id)
 );
@@ -67,9 +57,7 @@ CREATE TABLE dbo.borrow_records (
     book_id INT NOT NULL,
     borrow_date DATE NOT NULL,
     return_date DATE NOT NULL,
-    status NVARCHAR(50) NOT NULL,
+    status VARCHAR(255) NULL,
     CONSTRAINT FK_borrow_records_user FOREIGN KEY (user_id) REFERENCES dbo.users(id),
     CONSTRAINT FK_borrow_records_book FOREIGN KEY (book_id) REFERENCES dbo.books(id)
 );
-
-INSERT INTO dbo.roles(name) VALUES ('USER'), ('ADMIN'), ('STAFF');

@@ -1,22 +1,26 @@
 package com.example.myBookShop.DTO.Request;
 
-import com.example.myBookShop.Entity.Author;
-import jakarta.persistence.Column;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+// @Valid ở controller chỉ có tác dụng khi DTO có các ràng buộc như dưới đây.
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 public class CreateBookRequest {
-    String title;
-
-    BigDecimal price;
-
-    int  quantity;
-    String  authorName;
+    @NotBlank
+    private String title;
+    @NotNull
+    @PositiveOrZero
+    private BigDecimal price;
+    @PositiveOrZero
+    private int quantity;
+    @NotBlank
+    private String authorName;
 }

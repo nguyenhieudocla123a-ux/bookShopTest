@@ -2,11 +2,13 @@ package com.example.myBookShop.Entity;
 
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
 
-@Data
+@Getter
+@Setter
 @Table(name = "refresh_tokens")
 @Entity
 public class RefreshToken {
@@ -27,7 +29,7 @@ public class RefreshToken {
     @Column(name="created_at")
     private Instant createdAt;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User usersToken;
 }

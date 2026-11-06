@@ -1,6 +1,8 @@
 package com.example.myBookShop.DTO.Respone;
 
 import lombok.*;
+import org.springframework.data.domain.Page;
+
 import java.util.List;
 
 @Getter
@@ -22,4 +24,15 @@ public class PageResponse<T> {
     private boolean first;
 
     private boolean last;
+
+    public static <T> PageResponse<T> from(Page<T> page) {
+        return new PageResponse<>(
+                page.getContent(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.isFirst(),
+                page.isLast());
+    }
 }

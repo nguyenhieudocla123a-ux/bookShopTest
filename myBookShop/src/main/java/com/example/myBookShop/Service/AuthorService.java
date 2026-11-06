@@ -10,54 +10,75 @@ import com.example.myBookShop.Mapper.AuthorMapper;
 import com.example.myBookShop.Mapper.BookMapper;
 import com.example.myBookShop.Repositories.AuthorRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AuthorService {
-      private final AuthorRepository authorRepository;
-      private final AuthorMapper authorMapper;
-      private final BookMapper bookMapper;
-      private final RedisTemplate<String,Object> redisTemplate;
-      private final ObjectMapper objectMapper;
+    private static final Duration BOOKS_CACHE_TTL = Duration.ofMinutes(10);
 
-      //Find All
-      public List<AuthorResponse> getAll(){
-          return authorRepository.findAll().stream().map(authorMapper::toResponse).toList();
-      }
+    private final AuthorRepository authorRepository;
+    private final AuthorMapper authorMapper;
+    private final BookMapper bookMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
 
-      //Create
-      public AuthorResponse create(CreateAuthorRequest createAuthorRequest){
-          Author createdAuthor = authorMapper.fromCreateRequestToEntity(createAuthorRequest);
-          authorRepository.save(createdAuthor);
-          return authorMapper.toResponse(createdAuthor);
-      }
+    static String booksKey(int authorId) {
+        return "author:" + authorId + ":book";
+    }
 
-      //Find all books of author
+    @Transactional(readOnly = true)
+    public List<AuthorResponse> getAll() {
+        return authorRepository.findAll().stream().map(authorMapper::toResponse).toList();
+    }
 
-      public List<BookResponse> findBook(int id){
+    @Transactional
+    public AuthorResponse create(CreateAuthorRequest createAuthorRequest) {
+        Author createdAuthor = authorMapper.fromCreateRequestToEntity(createAuthorRequest);
+        authorRepository.save(createdAuthor);
+        return authorMapper.toResponse(createdAuthor);
+    }
 
-          //First step for finding book in redis
-           Author author=authorRepository.findById(id).orElseThrow(()-> new ResourceNotFoundException("Not found author"));
-           String key = "author:"+author.getId()+":book";
-           List<Object> listBook = redisTemplate.opsForList().range(key,0, -1);
-           if(!listBook.isEmpty()){
-               return author.getTheirBooks().stream().map(bookMapper::toResponse).toList();
-           }
-            redisTemplate.opsForList().rightPushAll(key,author.getTheirBooks().stream().map(bookMapper::toResponse).toList());
-            return redisTemplate.opsForList().range(key,0,-1).stream().map(t->objectMapper.convertValue(t,BookResponse.class)).toList();
-      }
+    @Transactional(readOnly = true)
+    public List<BookResponse> findBook(int id) {
+        String key = booksKey(id);
+        List<Object> cached = redisTemplate.opsForList().range(key, 0, -1);
+        if (cached != null && !cached.isEmpty()) {
+            return cached.stream().map(item -> objectMapper.convertValue(item, BookResponse.class)).toList();
+        }
 
-      //Delete author but server is going to reject if the book of this author still exist
+        Author author = findAuthor(id);
+        List<BookResponse> books = author.getTheirBooks().stream().map(bookMapper::toResponse).toList();
+        if (!books.isEmpty()) {
+            // rightPushAll có 2 bản: (K, V...) và (K, Collection<V>). Với V = Object, List<BookResponse>
+            // KHÔNG phải Collection<Object> (generics không hiệp biến), nên Java chọn bản varargs và đẩy
+            // CẢ danh sách thành MỘT phần tử. Đổi sang List<Object> để gọi đúng bản Collection.
+            List<Object> values = new ArrayList<>(books);
+            redisTemplate.opsForList().rightPushAll(key, values);
+            redisTemplate.expire(key, BOOKS_CACHE_TTL);
+        }
+        return books;
+    }
 
-      public void delete(int id ){
-          Author author=authorRepository.findById(id).orElseThrow(()-> new ResourceNotFoundException("Not found author"));
-          if(author.getTheirBooks().isEmpty()) authorRepository.delete(author);
-          else throw new ConflictDataException("all book of this author still exist");
-      }
+    /** Chỉ xoá được tác giả khi không còn sách. */
+    @Transactional
+    public void delete(int id) {
+        Author author = findAuthor(id);
+        if (!author.getTheirBooks().isEmpty()) {
+            throw new ConflictDataException("all book of this author still exist");
+        }
+        authorRepository.delete(author);
+        redisTemplate.delete(booksKey(id));
+    }
 
+    private Author findAuthor(int id) {
+        return authorRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Not found author"));
+    }
 }

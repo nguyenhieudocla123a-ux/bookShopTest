@@ -1,21 +1,18 @@
 package com.example.myBookShop.untils;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
-import java.util.Random;
+import java.security.SecureRandom;
 
 @Component
 public class GenerateCode {
-    private final int MAX=100000;
-    private final int MIN=1;
+    private static final int CODE_RANGE = 1_000_000;
 
+    // Random có thể đoán được nếu biết seed, mã bảo mật phải dùng SecureRandom.
+    private final SecureRandom random = new SecureRandom();
 
-    public GenerateCode(){
-    }
-    public String genCode(){
-        Random ran = new Random();
-        int code = ran.nextInt(MAX-MIN+1)-MIN;
-        return String.format("%06d",code);
+    /** nextInt(n) trả về 0 đến n-1, nên kết quả luôn nằm trong 000000 đến 999999. */
+    public String genCode() {
+        return String.format("%06d", random.nextInt(CODE_RANGE));
     }
 }

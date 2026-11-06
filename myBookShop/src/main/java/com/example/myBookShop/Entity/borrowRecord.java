@@ -1,39 +1,45 @@
 package com.example.myBookShop.Entity;
 
+import com.example.myBookShop.Enum.BorrowStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
 @Entity
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
-@Table(name="borrow_records")
+@Table(name = "borrow_records")
 public class borrowRecord {
 
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    int Id;
+    private int id;
 
-    @ManyToOne
-    @JoinColumn(name="user_id")
-    User user;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
-
-    @ManyToOne
-    @JoinColumn(name="book_id")
-    Book book;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "book_id")
+    private Book book;
 
     @Column(name = "borrow_date")
-    LocalDate borrowDate;
+    private LocalDate borrowDate;
 
+    // Hạn phải trả sách.
     @Column(name = "return_date")
-    LocalDate returnDate;
+    private LocalDate returnDate;
 
+    // Ngày thực tế trả sách, null khi chưa trả.
+    @Column(name = "returned_date")
+    private LocalDate returnedDate;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    String status;
+    private BorrowStatus status;
 }

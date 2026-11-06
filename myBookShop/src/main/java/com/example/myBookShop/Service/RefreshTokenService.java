@@ -1,83 +1,96 @@
 package com.example.myBookShop.Service;
 
+import com.example.myBookShop.DTO.Respone.TokenResponse;
 import com.example.myBookShop.Entity.RefreshToken;
 import com.example.myBookShop.Entity.User;
 import com.example.myBookShop.Exception.ResourceNotFoundException;
+import com.example.myBookShop.Exception.TokenException;
 import com.example.myBookShop.Repositories.RfTokenRepository;
 import com.example.myBookShop.Repositories.UserRepository;
 import com.example.myBookShop.Security.JwtService;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.UUID;
 
 @Service
 public class RefreshTokenService {
 
-    private final Long expirationToken;
+    private final long expirationToken;
     private final RfTokenRepository rfTokenRepository;
     private final UserRepository userRepository;
     private final JwtService jwtService;
 
-    public RefreshTokenService(RfTokenRepository rfTokenRepository, UserRepository userRepository, JwtService jwtService,@Value("${jwt.expiration-refreshToken}") Long expirationToken) {
+    public RefreshTokenService(RfTokenRepository rfTokenRepository, UserRepository userRepository, JwtService jwtService,
+                               @Value("${jwt.expiration-refreshToken}") long expirationToken) {
         this.rfTokenRepository = rfTokenRepository;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.expirationToken = expirationToken;
     }
 
-    //Create Refresh Token
+    /**
+     * Tạo refresh token mới. Token gốc chỉ trả cho client một lần,
+     * DB chỉ lưu bản băm nên lộ DB cũng không dùng được token.
+     */
     @Transactional
-    public RefreshToken create(int userId){
-        User user=userRepository.findById(userId).orElseThrow(()-> new ResourceNotFoundException("User not found!"));
+    public String create(int userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found!"));
+        return issueFor(user);
+    }
 
-        //Delete all user's refreshToken
-        rfTokenRepository.deleteAllByUsersToken_Id(userId);
-        //create object token
+    /**
+     * Xoay vòng token: mỗi refresh token chỉ dùng được một lần.
+     * Token cũ bị xoá, client nhận cặp access token và refresh token mới.
+     */
+    @Transactional
+    public TokenResponse rotate(String rawToken) {
+        RefreshToken current = rfTokenRepository.findByToken(hash(rawToken))
+                .orElseThrow(() -> new TokenException("Refresh token is invalid"));
+        if (current.isRevoked()) throw new TokenException("Refresh token is revoked");
+        if (current.getExpiryAt().isBefore(Instant.now())) throw new TokenException("Refresh token is expired");
+
+        User user = current.getUsersToken();
+        if (!user.isEnabled()) throw new TokenException("Account is disabled");
+
+        String newRefreshToken = issueFor(user);
+        return new TokenResponse(jwtService.generateToken(user), newRefreshToken);
+    }
+
+    /** Đăng xuất: xoá mọi refresh token của user. Token không tồn tại thì coi như đã đăng xuất. */
+    @Transactional
+    public void revoke(String rawToken) {
+        rfTokenRepository.findByToken(hash(rawToken))
+                .ifPresent(token -> rfTokenRepository.deleteAllByUsersToken_Id(token.getUsersToken().getId()));
+    }
+
+    private String issueFor(User user) {
+        rfTokenRepository.deleteAllByUsersToken_Id(user.getId());
+
+        String rawToken = UUID.randomUUID().toString();
+        Instant now = Instant.now();
         RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken(UUID.randomUUID().toString());
-        refreshToken.setCreatedAt(Instant.now());
-        refreshToken.setExpiryAt(refreshToken.getCreatedAt().plusMillis(expirationToken));
+        refreshToken.setToken(hash(rawToken));
+        refreshToken.setCreatedAt(now);
+        refreshToken.setExpiryAt(now.plusMillis(expirationToken));
         refreshToken.setRevoked(false);
         refreshToken.setUsersToken(user);
         rfTokenRepository.save(refreshToken);
-
-        return refreshToken;
+        return rawToken;
     }
 
-    //Check expiration
-
-    public boolean verifyExpirationToken(RefreshToken token){
-        return token.getExpiryAt().compareTo(Instant.now()) > 0;
+    private String hash(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(rawToken.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
+        }
     }
-    // find by token
-
-    public RefreshToken findByToken(String token){
-        return rfTokenRepository.findByToken(token).orElseThrow(()-> new ResourceNotFoundException("Refresh Token not found"));
-    }
-    // create new accessToken
-
-    public String createNewAccessToken(String token){
-        //Check Token's values
-        RefreshToken refreshToken=rfTokenRepository.findByToken(token).
-                orElseThrow(()-> new ResourceNotFoundException("Refresh Token not found"));
-        //Expiration
-        if(refreshToken.isRevoked()) throw  new RuntimeException("Refresh Token revoked");
-        if(refreshToken.getExpiryAt().compareTo(Instant.now()) < 0) throw  new RuntimeException("Refresh Token outdate!");
-        //Check user
-        User user = userRepository.findById(refreshToken.getUsersToken().getId()).orElseThrow(()-> new ResourceNotFoundException("User Not Found!"));
-
-        // generate access Token
-        return jwtService.generateToken(user,null);
-}
-    //Delete all refreshToken by userId
-    @Transactional
-    public void deleteAllRefreshToken(int id){
-        User user= userRepository.findById(id).orElseThrow(()-> new ResourceNotFoundException("User Not Found !"));
-        rfTokenRepository.deleteAllByUsersToken_Id(user.getId());
-    }
-
 }

@@ -1,6 +1,8 @@
 package com.example.myBookShop.DTO.Request;
 
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,9 +11,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateUserRequest {
-    String userName;
-    @Pattern(regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",message = "Email not valid")
-    String Email;
-    String passWord;
-    String Phone;
+    @NotBlank
+    @Size(min = 3, max = 50)
+    private String userName;
+    @NotBlank
+    @Email
+    private String email;
+    @NotBlank
+    @Size(min = 8, max = 72)
+    private String passWord;
+    @Size(max = 20)
+    private String phone;
 }

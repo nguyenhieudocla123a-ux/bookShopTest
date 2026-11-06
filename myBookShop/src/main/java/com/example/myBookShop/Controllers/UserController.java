@@ -5,21 +5,17 @@ import com.example.myBookShop.DTO.Respone.ApiRespone;
 import com.example.myBookShop.DTO.Respone.PageResponse;
 import com.example.myBookShop.DTO.Respone.UserSimpleResponse;
 import com.example.myBookShop.Service.UserService;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/user")
@@ -29,35 +25,16 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<?> create(@Valid @RequestBody CreateUserRequest createUserRequest){
-        ApiRespone<UserSimpleResponse> res=new ApiRespone<>(
-                true,
-                userService.create(createUserRequest),
-                "Create User Successful!",
-                LocalDateTime.now()
-        );
-        return ResponseEntity.ok(res);
+    public ResponseEntity<ApiRespone<UserSimpleResponse>> create(@Valid @RequestBody CreateUserRequest createUserRequest) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiRespone<>(
+                true, userService.create(createUserRequest), "Create User Successful!", LocalDateTime.now()));
     }
+
     @GetMapping
-    public ResponseEntity<?> getAllSimple(
-            @RequestParam(defaultValue = "0") int page , @RequestParam(defaultValue = "10") int size){
-        Pageable pageable = PageRequest.of(page,size);
-        System.out.println("Đã vào đây");
-        Page<UserSimpleResponse> listPage=userService.getAllSimpleUser(pageable);
-        PageResponse<UserSimpleResponse> pageResponse = new PageResponse<>(
-                listPage.getContent(),
-                listPage.getNumber(),
-                listPage.getSize(),
-                listPage.getTotalElements(),
-                listPage.getTotalPages(),
-                listPage.isFirst(),
-                listPage.isLast()
-        );
-        ApiRespone<PageResponse<UserSimpleResponse>> res= new ApiRespone<>(
-                true,pageResponse,"Successful",LocalDateTime.now()
-        );
-        return ResponseEntity.ok(res);
+    public ResponseEntity<ApiRespone<PageResponse<UserSimpleResponse>>> getAllSimple(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size) {
+        return ResponseEntity.ok(new ApiRespone<>(
+                true, PageResponse.from(userService.getAllSimpleUser(PageRequest.of(page, size))), "Successful", LocalDateTime.now()));
     }
-
-
 }

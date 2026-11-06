@@ -1,5 +1,6 @@
 package com.example.myBookShop.Config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
@@ -19,6 +20,8 @@ public class RedisConfig {
         template.setConnectionFactory(connectionFactory);
         ObjectMapper om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());
+        // Giữ nguyên độ chính xác của giá tiền khi đọc lại từ Redis (không đổi BigDecimal thành Double).
+        om.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(new Jackson2JsonRedisSerializer<>(om,Object.class));
 

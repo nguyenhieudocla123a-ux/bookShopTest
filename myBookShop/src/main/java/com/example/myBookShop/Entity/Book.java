@@ -1,16 +1,18 @@
 package com.example.myBookShop.Entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+// Không dùng @Data cho Entity: toString/hashCode sinh tự động sẽ đi theo quan hệ hai chiều
+// (Book -> borrowRecord -> Book ...) và có thể gây StackOverflowError hoặc tải cả DB.
 @Entity
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
 @Table(name = "books")
 public class Book {
@@ -18,22 +20,21 @@ public class Book {
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    int Id;
+    private int id;
 
-    @Column(name="title")
-    String title;
+    @Column(name = "title")
+    private String title;
 
-    @Column(name="price")
-    BigDecimal price;
+    @Column(name = "price")
+    private BigDecimal price;
 
-    @Column(name="quantity")
-    int  quantity;
+    @Column(name = "quantity")
+    private int quantity;
 
-    @JoinColumn(name="author_id")
-    @ManyToOne(fetch = FetchType.EAGER)
-    Author author;
+    @JoinColumn(name = "author_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Author author;
 
     @OneToMany(mappedBy = "book")
-    List<borrowRecord> borrowRecordList;
-
+    private List<borrowRecord> borrowRecordList;
 }

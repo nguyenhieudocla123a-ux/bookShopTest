@@ -1,10 +1,9 @@
 package com.example.myBookShop.Entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,8 +13,8 @@ import java.util.Collection;
 import java.util.List;
 
 @Entity
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
 @Table(name = "users")
 public class User implements UserDetails {
@@ -23,43 +22,43 @@ public class User implements UserDetails {
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    int Id;
+    private int id;
 
-    @Column(name="username")
-    String userName;
+    @Column(name = "username")
+    private String userName;
 
-    @Pattern(regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",message = "Email not valid")
-    @Column(name="email")
-    String email;
+    @Column(name = "email")
+    private String email;
 
     @Column(name = "password")
-    String passWord;
+    private String passWord;
 
     @Column(name = "phone")
-    String phone;
+    private String phone;
 
-    @Column(name="enabled")
-    boolean enable;
+    @Column(name = "enabled")
+    private boolean enable;
 
-    @Column(name="created_at")
-    LocalDateTime createdAt;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
-    //To get all roles of user
-    @OneToMany(mappedBy = "user",fetch = FetchType.EAGER)
-    List<userRole> userRoleList;
+    // LAZY: danh sách user không cần role. Khi đăng nhập, UserRepository.findByUserName tải sẵn role.
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<userRole> userRoleList;
 
-    //To get all borrow records of user
+    @OneToMany(mappedBy = "user")
+    private List<borrowRecord> borrowRecordList;
 
-    @OneToMany(mappedBy ="user")
-    List<borrowRecord> borrowRecordList;
+    @OneToMany(mappedBy = "usersToken")
+    private List<RefreshToken> refreshToken;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return this.getUserRoleList().stream().map(item->new SimpleGrantedAuthority("ROLE_"+ item.getRole().getName().toUpperCase())).toList();
+        return this.getUserRoleList().stream()
+                .map(item -> new SimpleGrantedAuthority("ROLE_" + item.getRole().getName().toUpperCase()))
+                .toList();
     }
-    // Refresh token
-    @OneToMany(mappedBy = "usersToken")
-    List<RefreshToken>  refreshToken;
+
     @Override
     public String getPassword() {
         return this.passWord;
@@ -70,23 +69,9 @@ public class User implements UserDetails {
         return this.userName;
     }
 
-    @Override
-    public boolean isAccountNonExpired() {
-        return UserDetails.super.isAccountNonExpired();
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return UserDetails.super.isAccountNonLocked();
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return UserDetails.super.isCredentialsNonExpired();
-    }
-
+    // Trước đây luôn trả true nên cột enabled không có tác dụng và tài khoản bị khoá vẫn đăng nhập được.
     @Override
     public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
+        return this.enable;
     }
 }

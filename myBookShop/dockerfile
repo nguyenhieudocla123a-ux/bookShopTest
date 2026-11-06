@@ -1,0 +1,16 @@
+# Giai doan build: khong can cai Maven hay build san jar tren may
+FROM eclipse-temurin:17-jdk AS build
+WORKDIR /src
+COPY .mvn .mvn
+COPY mvnw pom.xml ./
+COPY src src
+RUN sed -i 's/\r$//' mvnw && sh ./mvnw -q -DskipTests package
+
+# Giai doan chay: image nho hon, chay bang user khong phai root
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+RUN useradd --system appuser
+COPY --from=build /src/target/myBookShop-0.0.1-SNAPSHOT.jar app.jar
+USER appuser
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

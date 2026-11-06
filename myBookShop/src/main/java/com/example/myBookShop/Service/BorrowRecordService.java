@@ -12,90 +12,90 @@ import com.example.myBookShop.Mapper.BorrowMapper;
 import com.example.myBookShop.Repositories.BookRepository;
 import com.example.myBookShop.Repositories.BorrowRecordRepository;
 import com.example.myBookShop.Repositories.UserRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @Service
-@AllArgsConstructor
-
+@RequiredArgsConstructor
 public class BorrowRecordService {
+    private static final List<BorrowStatus> ACTIVE_STATUSES = List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE);
+
     private final BorrowRecordRepository borrowRecordRepository;
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
     private final BorrowMapper borrowMapper;
-    private final RedisTemplate<String,Object> redisTemplate;
-    private final ObjectMapper objectMapper;
-    @Transactional
-    public BorrowRecordResponse create(CreateBorrowRecordRequest request){
-        User user=userRepository.findById(request.getUserId()).orElseThrow(()->new ResourceNotFoundException("Not found User"));
-        Book book =bookRepository.findById(request.getBookId()).orElseThrow(()-> new ResourceNotFoundException("Book Not Found "));
-        //if book's quantity is less than 0 ==> reject
-        if(book.getQuantity() ==0) throw new ConflictDataException("Book Quantity Not Enough");
-        //Check constant if userId and bookId are existed in table ,
-        borrowRecord newBorrow=new borrowRecord();
-
-
-        book.setQuantity(book.getQuantity()-1);
-        newBorrow.setBook(book);
-        newBorrow.setUser(user);
-        newBorrow.setStatus(BorrowStatus.BORROWING.name());
-        newBorrow.setBorrowDate(LocalDate.now());
-        newBorrow.setReturnDate(LocalDate.now().plusDays(request.getReturnDate()));
-        borrowRecordRepository.save(newBorrow);
-        return borrowMapper.toResponse(newBorrow);
-    }
-
-    //Update overdue borrow
-    @Scheduled(fixedRate = 5000)
-    @Transactional
-    public  void updateOverdue(){
-     borrowRecordRepository.findAll().stream().filter(borrow->borrow.getReturnDate().isBefore(LocalDate.now())).forEach(borrow->borrow.setStatus(BorrowStatus.OVERDUE.name()));
-    }
-
-    //we wil delete borrows if state of book is returned
-
-    @Scheduled(fixedDelay = 5000)
-    @Transactional
-    public  void updateDelete(){
-       List<borrowRecord> list= borrowRecordRepository.findAll().stream().filter(borrow->borrow.getStatus().equals(BorrowStatus.RETURNED.name())).toList();
-       borrowRecordRepository.deleteAll(list);
-    }
-    @Transactional
-    public BorrowRecordResponse createBorrow(CreateBorrowRecordRequest  request){
-         User user=userRepository.findById(request.getUserId()).orElseThrow(()->new ResourceNotFoundException("Not found User"));
-         Book book=bookRepository.findById(request.getBookId()).orElseThrow(()->new ResourceNotFoundException("Book Not Found "));
-         borrowRecord borrow=new borrowRecord();
-         borrow.setUser(user);
-         borrow.setBook(book);
-         borrow.setBorrowDate(LocalDate.now());
-         borrow.setReturnDate(LocalDate.now().plusDays(request.getReturnDate()));
-         borrow.setStatus(BorrowStatus.BORROWING.name());
-         borrowRecordRepository.save(borrow);
-         return borrowMapper.toResponse(borrow);
-    }
 
     @Transactional
-    public List<BorrowRecordResponse> getAllBorrow(){
-        //Redis Checking
-        String key ="record:borrow";
-        List<BorrowRecordResponse> list =redisTemplate.opsForList().range(key, 0, -1).stream().map(t->objectMapper.convertValue(t,BorrowRecordResponse.class)).toList();
+    public BorrowRecordResponse create(CreateBorrowRecordRequest request, int userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Not found User"));
+        Book book = bookRepository.findById(request.getBookId()).orElseThrow(() -> new ResourceNotFoundException("Book Not Found"));
 
-        if(!list.isEmpty()){
-            return list;
+        if (borrowRecordRepository.existsByUser_IdAndBook_IdAndStatusIn(userId, book.getId(), ACTIVE_STATUSES)) {
+            throw new ConflictDataException("You are already borrowing this book");
         }
-        List<BorrowRecordResponse> listBorrow=borrowRecordRepository.findAll().stream().map(borrowMapper::toResponse).toList();
-        if(!listBorrow.isEmpty()){
-            redisTemplate.opsForList().rightPushAll(key,listBorrow);
+        // Không đọc quantity rồi set lại: hai người cùng đọc được 1 cuốn sẽ đều mượn thành công.
+        if (bookRepository.decreaseQuantity(book.getId()) == 0) {
+            throw new ConflictDataException("Book Quantity Not Enough");
         }
-        return listBorrow;
+
+        borrowRecord borrow = new borrowRecord();
+        borrow.setBook(book);
+        borrow.setUser(user);
+        borrow.setStatus(BorrowStatus.BORROWING);
+        borrow.setBorrowDate(LocalDate.now());
+        borrow.setReturnDate(LocalDate.now().plusDays(request.getBorrowDays()));
+        borrowRecordRepository.save(borrow);
+        return borrowMapper.toResponse(borrow);
+    }
+
+    /** Trả sách: chỉ chủ phiếu hoặc nhân viên được thao tác. Giữ phiếu lại làm lịch sử, không xoá. */
+    @Transactional
+    public BorrowRecordResponse returnBook(int borrowId, User currentUser) {
+        borrowRecord borrow = borrowRecordRepository.findById(borrowId)
+                .orElseThrow(() -> new ResourceNotFoundException("Borrow record not found"));
+
+        if (borrow.getUser().getId() != currentUser.getId() && !isStaff(currentUser)) {
+            throw new AccessDeniedException("You can only return your own books");
+        }
+        if (borrow.getStatus() == BorrowStatus.RETURNED) {
+            throw new ConflictDataException("This book has already been returned");
+        }
+
+        borrow.setStatus(BorrowStatus.RETURNED);
+        borrow.setReturnedDate(LocalDate.now());
+        bookRepository.increaseQuantity(borrow.getBook().getId());
+        return borrowMapper.toResponse(borrow);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BorrowRecordResponse> getAll(Pageable pageable) {
+        return borrowRecordRepository.findAll(pageable).map(borrowMapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BorrowRecordResponse> getByUser(int userId, Pageable pageable) {
+        return borrowRecordRepository.findByUser_Id(userId, pageable).map(borrowMapper::toResponse);
+    }
+
+    /** Hạn trả tính theo ngày nên quét mỗi giờ là đủ. fixedRate cũng chạy một lần ngay khi khởi động. */
+    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.HOURS)
+    @Transactional
+    public void updateOverdue() {
+        borrowRecordRepository.markOverdue(LocalDate.now());
+    }
+
+    private boolean isStaff(User user) {
+        return user.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN")
+                        || authority.getAuthority().equals("ROLE_STAFF"));
     }
 }
