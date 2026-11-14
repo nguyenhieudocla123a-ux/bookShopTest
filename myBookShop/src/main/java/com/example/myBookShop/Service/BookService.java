@@ -6,6 +6,7 @@ import com.example.myBookShop.DTO.Respone.BookResponse;
 import com.example.myBookShop.DTO.Respone.BookViewResponse;
 import com.example.myBookShop.Entity.Author;
 import com.example.myBookShop.Entity.Book;
+import com.example.myBookShop.Exception.ConflictDataException;
 import com.example.myBookShop.Exception.ResourceNotFoundException;
 import com.example.myBookShop.Mapper.BookMapper;
 import com.example.myBookShop.Repositories.AuthorRepository;
@@ -51,6 +52,9 @@ public class BookService {
         newBook.setAuthor(author);
         newBook.setQuantity(request.getQuantity());
         newBook.setPrice(request.getPrice());
+        if(bookRepository.existsByTitle(request.getTitle())) {
+            throw  new ConflictDataException("Title already exists");
+        }
         bookRepository.save(newBook);
         redisTemplate.delete(AuthorService.booksKey(author.getId()));
         return bookMapper.toResponse(newBook);

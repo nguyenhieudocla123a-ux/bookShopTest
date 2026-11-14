@@ -27,4 +27,10 @@ public interface BookRepository extends JpaRepository<Book, Integer> {
     @Modifying
     @Query("update Book b set b.quantity = b.quantity + 1 where b.id = :id")
     int increaseQuantity(@Param("id") int id);
+
+    boolean existsByTitle(String title);
+
+    //lấy sách theo tác giả
+    @Query("SELECT b from Book b where b.author.id=:id")
+    Book findByAuthorId(@Param("id") int id);
 }
