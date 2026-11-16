@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -56,9 +57,11 @@ public class UserService implements UserDetailsService {
         if (userRepository.findByUserName(userName).isPresent()) {
             throw new ConflictDataException("Username is already existed!");
         }
+        if(userRepository.existsByEmail(email)) {
+            throw new ConflictDataException("Email is already existed!");
+        }
         Role role = roleRepository.findByName(DEFAULT_ROLE)
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
-
         User user = new User();
         user.setUserName(userName);
         user.setEmail(email);
@@ -66,6 +69,7 @@ public class UserService implements UserDetailsService {
         user.setPhone(phone);
         user.setEnable(true);
         user.setCreatedAt(LocalDateTime.now());
+        user.setUserRoleList(List.of(new userRole(user,role)));
         userRepository.save(user);
         userRoleRepository.save(new userRole(user, role));
         return user;

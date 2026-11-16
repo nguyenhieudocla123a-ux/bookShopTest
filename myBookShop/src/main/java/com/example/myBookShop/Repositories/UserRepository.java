@@ -13,4 +13,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     // Đăng nhập và JWT filter đều cần role để tạo authorities nên tải sẵn tại đây.
     @EntityGraph(attributePaths = {"userRoleList", "userRoleList.role"})
     Optional<User> findByUserName(String username);
+
+    boolean existsByEmail(String email);
 }
